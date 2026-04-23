@@ -101,15 +101,27 @@ public class MaintenanceRequestService {
         reopened.setPreferredDate(original.getPreferredDate());
         reopened.setPreferredTime(original.getPreferredTime());
         reopened.setAllowEntry(original.isAllowEntry());
-        reopened.setStatus(Status.PENDING);
         reopened.setDateSubmitted(LocalDateTime.now());
         reopened.setParentRequestId(original.getRequestId());
+        if (original.getAssignedStaffId() != null) {
+            reopened.setAssignedStaffId(original.getAssignedStaffId());
+            reopened.setStatus(Status.ASSIGNED);
+        } else {
+            reopened.setStatus(Status.PENDING);
+        }
         MaintenanceRequest saved = requestRepository.save(reopened);
         notificationService.create(
                 saved.getTenantId(),
                 saved.getRequestId(),
                 "Your request has been reopened and is pending review."
         );
+        if (saved.getAssignedStaffId() != null) {
+            notificationService.create(
+                    saved.getAssignedStaffId(),
+                    saved.getRequestId(),
+                    "A request you previously worked on has been reopened and assigned back to you."
+            );
+        }
         sseService.broadcast("request-created", ev("request-created", saved.getRequestId()));
         return saved;
     }
